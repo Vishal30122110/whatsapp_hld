@@ -45,8 +45,13 @@ export default function Chat() {
     });
     s.on('message_status', (st) => console.log('status', st));
       setSocket(s);
-      // set current chat and fetch its messages
+      // set current chat, join room and fetch its messages
       setCurrentChatId(chatId);
+      try {
+        s.emit('join_chat', { chatId });
+      } catch (e) {
+        console.error('join_chat emit failed', e);
+      }
       fetchMessages(chatId).catch((e) => console.error('fetchMessages init error', e));
       return () => s.disconnect();
     }
@@ -125,6 +130,11 @@ export default function Chat() {
       localStorage.setItem('demoChatId', chatId);
       await fetchChats();
       setCurrentChatId(chatId);
+      try {
+        socket && socket.emit('join_chat', { chatId });
+      } catch (e) {
+        console.error('join_chat emit failed', e);
+      }
       await fetchMessages(chatId);
     } catch (err) {
       console.error('create group error', err);
@@ -136,6 +146,11 @@ export default function Chat() {
     localStorage.setItem('demoChatId', chatId);
     setCurrentChatId(chatId);
     fetchMessages(chatId).catch((e) => console.error('fetchMessages select error', e));
+    try {
+      socket && socket.emit('join_chat', { chatId });
+    } catch (e) {
+      console.error('join_chat emit failed', e);
+    }
   }
 
   return (
@@ -157,6 +172,11 @@ export default function Chat() {
                     localStorage.setItem('demoChatId', newId);
                     fetchChats();
                     setCurrentChatId(newId);
+                    try {
+                      socket && socket.emit('join_chat', { chatId: newId });
+                    } catch (e) {
+                      console.error('join_chat emit failed', e);
+                    }
                     fetchMessages(newId).catch((e) => console.error('fetchMessages new direct error', e));
                   }).catch((err) => alert('Failed to create direct chat'));
                 }).catch((err) => alert('Search failed'));

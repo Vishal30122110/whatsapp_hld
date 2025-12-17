@@ -53,6 +53,17 @@ function attachSocket(httpServer) {
       }
     })();
 
+    socket.on('join_chat', async (payload) => {
+      try {
+        const chatId = (typeof payload === 'string') ? payload : payload?.chatId;
+        if (!chatId) return;
+        socket.join(String(chatId));
+        console.log(`socket ${socket.id} joined chat ${chatId}`);
+      } catch (err) {
+        console.error('join_chat error', err);
+      }
+    });
+
     socket.on('send_message', async (payload, cb) => {
       try {
         // payload: { clientMsgId, chatId, type, content }
@@ -81,10 +92,10 @@ function attachSocket(httpServer) {
           serverReceivedAt: new Date()
         });
 
-        // simple fan-out to chat participants (works for small groups)
-        const recipientIds = chat.participants.map((p) => String(p.userId));
-        recipientIds.forEach((rid) => {
-          io.to(rid).emit('message', {
+        // emit to chat room (if participants joined) and personal rooms as fallback
+        try {
+          const roomId = String(chat._id);
+          io.to(roomId).emit('message', {
             messageId: msg.messageId,
             chatId: payload.chatId,
             senderId: String(socket.userId),
@@ -93,6 +104,25 @@ function attachSocket(httpServer) {
             mentions: msg.mentions,
             createdAt: msg.createdAt
           });
+        } catch (err) {
+          console.error('emit to room error', err);
+        }
+
+        const recipientIds = chat.participants.map((p) => String(p.userId));
+        recipientIds.forEach((rid) => {
+          try {
+            io.to(rid).emit('message', {
+              messageId: msg.messageId,
+              chatId: payload.chatId,
+              senderId: String(socket.userId),
+              type: msg.type,
+              content: msg.content,
+              mentions: msg.mentions,
+              createdAt: msg.createdAt
+            });
+          } catch (err) {
+            console.error('emit to personal room error', err);
+          }
         });
 
         // emit mention notifications to specifically mentioned users
