@@ -1,0 +1,15 @@
+body { font-family: Arial, Helvetica, sans-serif; margin: 0; background: #f5f5f7; }
+.login { max-width: 360px; margin: 80px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);} 
+.login input { display:block; width:100%; padding:10px; margin:8px 0; }
+.login button { padding:10px 14px }
+.msg { color: red; margin-top:10px }
+
+.chat-root { max-width: 720px; margin: 20px auto; background: white; border-radius:8px; overflow:hidden; display:flex; flex-direction:column; height:80vh }
+.topbar { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid #eee }
+.messages { flex:1; padding:12px; overflow:auto; background: #fafafc }
+.message { max-width:70%; padding:8px 12px; margin-bottom:8px; border-radius:8px }
+.message.mine { margin-left:auto; background:#dcf8c6 }
+.message.other { margin-right:auto; background:white; }
+.composer { display:flex; padding:10px; border-top:1px solid #eee }
+.composer input { flex:1; padding:8px 10px }
+.composer button { padding:8px 12px; margin-left:8px }
