@@ -5,6 +5,7 @@ const { connect } = require('./db');
 const { port } = require('./config');
 const authRoutes = require('./routes/auth');
 const chatRoutes = require('./routes/chat');
+const usersRoutes = require('./routes/users');
 const { attachSocket } = require('./ws');
 
 async function start() {
@@ -18,9 +19,19 @@ async function start() {
 
   app.use('/api/auth', authRoutes);
   app.use('/api/chat', chatRoutes);
+  app.use('/api/users', usersRoutes);
 
   const server = http.createServer(app);
   attachSocket(server);
+
+  server.on('error', (err) => {
+    if (err && err.code === 'EADDRINUSE') {
+      console.error(`Port ${port} already in use. Another process is listening on this port.`);
+      process.exit(1);
+    }
+    console.error('Server error', err);
+    process.exit(1);
+  });
 
   server.listen(port, () => console.log(`Server listening on ${port}`));
 }

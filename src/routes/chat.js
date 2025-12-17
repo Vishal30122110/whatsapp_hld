@@ -23,11 +23,12 @@ router.post('/direct', auth, async (req, res) => {
     const otherId = String(req.body.otherUserId);
     if (!otherId) return res.status(400).json({ error: 'otherUserId required' });
     const mongoose = require('mongoose');
-    const members = [mongoose.Types.ObjectId(userId), mongoose.Types.ObjectId(otherId)].map(String).sort();
-    console.log('direct chat members (sorted):', members);
-    let chat = await Chat.findOne({ memberIds: members, type: 'direct' });
+    const members = [String(userId), String(otherId)].sort();
+    const memberKey = members.join('_');
+    console.log('direct chat memberKey:', memberKey);
+    let chat = await Chat.findOne({ memberKey, type: 'direct' });
     if (!chat) {
-      chat = await Chat.create({ type: 'direct', participants: [{ userId }, { userId: otherId }], memberIds: members });
+      chat = await Chat.create({ type: 'direct', participants: [{ userId }, { userId: otherId }], memberIds: members, memberKey });
     }
     res.json({ chatId: chat._id });
   } catch (err) {
@@ -51,7 +52,7 @@ router.post('/group', auth, async (req, res) => {
         if (pidStr === String(userId)) return;
         if (!seen.has(pidStr)) {
           seen.add(pidStr);
-          participants.push({ userId: mongoose.Types.ObjectId(pidStr) });
+          participants.push({ userId: new mongoose.Types.ObjectId(pidStr) });
         }
       });
     }
@@ -77,4 +78,18 @@ router.post('/demo', auth, async (req, res) => {
   }
 });
 
+// Fetch messages for a chat
+router.get('/:id/messages', auth, async (req, res) => {
+  try {
+    const chatId = req.params.id;
+    const Message = require('../models/message');
+    const messages = await Message.find({ chatId }).sort({ createdAt: 1 }).lean();
+    res.json({ messages });
+  } catch (err) {
+    console.error('fetch messages error', err);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
 module.exports = router;
+

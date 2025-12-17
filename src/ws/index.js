@@ -27,6 +27,32 @@ function attachSocket(httpServer) {
 
     socket.join(uid); // join personal room
 
+    // deliver undelivered messages for this user (messages where deliveredTo does not include user)
+    (async () => {
+      try {
+        const chats = await Chat.find({ 'participants.userId': socket.userId }).select('_id');
+        const chatIds = chats.map((c) => String(c._id));
+        const pending = await Message.find({ chatId: { $in: chatIds }, deliveredTo: { $ne: socket.userId } }).sort({ createdAt: 1 });
+        for (const m of pending) {
+          io.to(uid).emit('message', {
+            messageId: m.messageId,
+            chatId: m.chatId,
+            senderId: String(m.senderId),
+            type: m.type,
+            content: m.content,
+            mentions: m.mentions,
+            createdAt: m.createdAt
+          });
+          if (!m.deliveredTo.includes(socket.userId)) {
+            m.deliveredTo.push(socket.userId);
+            await m.save();
+          }
+        }
+      } catch (err) {
+        console.error('deliver pending error', err);
+      }
+    })();
+
     socket.on('send_message', async (payload, cb) => {
       try {
         // payload: { clientMsgId, chatId, type, content }
