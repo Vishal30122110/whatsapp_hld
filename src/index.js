@@ -4,6 +4,7 @@ const cors = require('cors');
 const { connect } = require('./db');
 const { port } = require('./config');
 const authRoutes = require('./routes/auth');
+const chatRoutes = require('./routes/chat');
 const { attachSocket } = require('./ws');
 
 async function start() {
@@ -16,6 +17,7 @@ async function start() {
   app.get('/health', (req, res) => res.json({ ok: true }));
 
   app.use('/api/auth', authRoutes);
+  app.use('/api/chat', chatRoutes);
 
   const server = http.createServer(app);
   attachSocket(server);

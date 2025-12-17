@@ -6,6 +6,7 @@ const MessageSchema = new Schema({
   senderId: { type: Types.ObjectId, ref: 'User' },
   type: { type: String, default: 'text' },
   content: Schema.Types.Mixed,
+  mentions: [{ type: Types.ObjectId, ref: 'User' }],
   attachments: [Schema.Types.Mixed],
   createdAt: { type: Date, default: () => new Date() },
   serverReceivedAt: Date,

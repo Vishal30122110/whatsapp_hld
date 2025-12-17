@@ -1,6 +1,7 @@
 const { Server } = require('socket.io');
 
 const Message = require('../models/message');
+const User = require('../models/user');
 const Chat = require('../models/chat');
 const { v4: uuidv4 } = require('uuid');
 
@@ -34,12 +35,23 @@ function attachSocket(httpServer) {
         const chat = await Chat.findById(payload.chatId);
         if (!chat) return cb && cb({ error: 'chat not found' });
 
+        // detect @mentions in text messages (simple word-based regexp)
+        let mentionIds = [];
+        if (payload.type === 'text' && typeof payload.content === 'string') {
+          const mentionNames = Array.from(new Set(payload.content.match(/@([a-zA-Z0-9_\-\.]+)/g) || [])).map((m) => m.slice(1));
+          if (mentionNames.length) {
+            const users = await User.find({ username: { $in: mentionNames } }).select('_id username');
+            mentionIds = users.map((u) => u._id);
+          }
+        }
+
         const msg = await Message.create({
           messageId: clientMsgId,
           chatId: payload.chatId,
           senderId: socket.userId,
           type: payload.type || 'text',
           content: payload.content,
+          mentions: mentionIds,
           serverReceivedAt: new Date()
         });
 
@@ -52,9 +64,22 @@ function attachSocket(httpServer) {
             senderId: String(socket.userId),
             type: msg.type,
             content: msg.content,
+            mentions: msg.mentions,
             createdAt: msg.createdAt
           });
         });
+
+        // emit mention notifications to specifically mentioned users
+        if (mentionIds && mentionIds.length) {
+          mentionIds.forEach((mid) => {
+            io.to(String(mid)).emit('mentioned', {
+              messageId: msg.messageId,
+              chatId: payload.chatId,
+              from: String(socket.userId),
+              at: msg.createdAt
+            });
+          });
+        }
 
         cb && cb({ ok: true, messageId: msg.messageId });
       } catch (err) {
